@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Digital Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #e9eef1;
+    --panel: #f8fafb;
+    --ink: #14213d;
+    --muted: #5d6b82;
+    --accent: #e4572e;
+    --line: #c9d3da;
+    --shadow: rgba(20, 33, 61, 0.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101826; --panel: #172235; --ink: #eef3f8;
+      --muted: #93a2b8; --accent: #ff7a50; --line: #2b3a52;
+      --shadow: rgba(0, 0, 0, 0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101826; --panel: #172235; --ink: #eef3f8;
+    --muted: #93a2b8; --accent: #ff7a50; --line: #2b3a52;
+    --shadow: rgba(0, 0, 0, 0.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "DM Sans", system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+  }
+
+  .clock {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: clamp(1.5rem, 5vw, 3rem);
+    width: min(100%, 720px);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+
+  .time {
+    font-family: "Share Tech Mono", ui-monospace, monospace;
+    font-size: clamp(3rem, 15vw, 8rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+    transition: color 0.3s ease, letter-spacing 0.3s ease;
+  }
+
+  .sep { color: var(--accent); transition: opacity 0.3s ease; }
+  .sep.off { opacity: 0.2; }
+
+  .period {
+    font-size: clamp(1rem, 4vw, 1.75rem);
+    margin-left: 0.4rem;
+    color: var(--muted);
+    letter-spacing: 0;
+  }
+
+  .date {
+    margin: 1.25rem 0 0.25rem;
+    font-size: clamp(1rem, 3.5vw, 1.4rem);
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  .zone { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.75rem;
+  }
+
+  button {
+    font: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease,
+                color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--panel);
+    border-color: var(--ink);
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Hover effects (only on devices that can actually hover) */
+  @media (hover: hover) {
+    .clock:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent);
+      box-shadow: 0 20px 40px -12px var(--shadow);
+    }
+
+    .time:hover {
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .time:hover .sep { color: var(--ink); }
+    .time:hover .sep.off { opacity: 1; } /* colon stops fading while hovered */
+
+    .date:hover { color: var(--accent); }
+
+    button:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: 0 6px 14px -6px var(--shadow);
+    }
+    button:not([aria-pressed="true"]):hover {
+      background: var(--accent);
+      color: var(--panel);
+    }
+    button[aria-pressed="true"]:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+  }
+
+  button:active { transform: translateY(0) scale(0.97); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .clock, .time, button { transition: none; }
+    .clock:hover, button:hover, button:active { transform: none; }
+    .time:hover { letter-spacing: -0.02em; }
+  }
+</style>    
+</head>
+<body>
+    <main class="clock" aria-label="Digital Clock">
+        <p class="time" id="time" role="timer" aria-live="off">--:--:--</p>
+        <p class="date" id="date"></p>
+        <p class="zone" id="zone"></p>
+        <div class="controls">
+            <button id="fmt" aria-pressed="false">24-hour</button>
+            <button id="sec" aria-pressed="false">Show Seconds</button>
+            <button id="theme" aria-pressed="false">Dark Mode</button>
+        </div>
+    </main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const state = { h24: false, seconds: true };
+  const pad = n => String(n).padStart(2, "0");
+
+  function render() {
+    const now = new Date();
+    let h = now.getHours();
+    const period = h >= 12 ? "PM" : "AM";
+    if (!state.h24) h = h % 12 || 12;
+
+    // The colon dims on odd seconds to create a blink
+    const sepClass = now.getSeconds() % 2 ? "sep off" : "sep";
+    const sep = `<span class="${sepClass}">:</span>`;
+
+    let html = pad(h) + sep + pad(now.getMinutes());
+    if (state.seconds) html += sep + pad(now.getSeconds());
+    if (!state.h24) html += `<span class="period">${period}</span>`;
+
+    $("time").innerHTML = html;
+    $("date").textContent = now.toLocaleDateString(undefined, {
+      weekday: "long", month: "long", day: "numeric", year: "numeric"
+    });
+    $("zone").textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.title = pad(h) + ":" + pad(now.getMinutes()) + " · Digital Clock";
+  }
+
+  // 12/24-hour toggle
+  $("fmt").addEventListener("click", () => {
+    state.h24 = !state.h24;
+    $("fmt").setAttribute("aria-pressed", String(state.h24));
+    render();
+  });
+
+  // Show/hide seconds
+  $("sec").addEventListener("click", () => {
+    state.seconds = !state.seconds;
+    $("sec").setAttribute("aria-pressed", String(state.seconds));
+    render();
+  });
+
+  // Light/dark theme
+  $("theme").addEventListener("click", () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme === "dark" ||
+      (!root.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+    root.dataset.theme = dark ? "light" : "dark";
+    $("theme").setAttribute("aria-pressed", String(!dark));
+  });
+
+    if (matchMedia("(prefers-color-scheme: dark)").matches) {
+    $("theme").setAttribute("aria-pressed", "true");
+  }
+
+  // Update at the start of every second so the clock stays in sync
+  (function tick() {
+    render();
+    setTimeout(tick, 1000 - (Date.now() % 1000));
+  })();
+</script>
+</body>
+</html>
